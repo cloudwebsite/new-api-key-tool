@@ -12,6 +12,7 @@ import Papa from 'papaparse';
 const { Text } = Typography;
 const { Panel } = Collapse;
 const { TabPane } = Tabs;
+const baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);
 
 function renderTimestamp(timestamp) {
     return timestamp2string(timestamp);
@@ -44,7 +45,6 @@ const LogsTable = () => {
     const [activeKeys, setActiveKeys] = useState([]);
     const [pageSize, setPageSize] = useState(ITEMS_PER_PAGE);
     const [baseUrl, setBaseUrl] = useState('');
-    const baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);  // 解析环境变量
 
     useEffect(() => {
         // 默认设置第一个地址为baseUrl
@@ -118,13 +118,9 @@ const LogsTable = () => {
                 const logRes = await API.get(`${baseUrl}/api/log/token`, {
                     headers: { Authorization: `Bearer ${apikey}` },
                 });
-                const { success, message, data: logData } = logRes.data;
+                const { success, data: logData } = logRes.data;
                 if (success) {
                     newTabData.logs = logData.reverse();
-                    let quota = 0;
-                    for (let i = 0; i < logData.length; i++) {
-                        quota += logData[i].quota;
-                    }
                     setActiveKeys(['1', '2']); // 自动展开两个折叠面板
                 } else {
                     Toast.error('查询调用详情失败，请输入正确的令牌');
@@ -491,7 +487,7 @@ const LogsTable = () => {
         <>
             {Object.keys(baseUrls).length > 1 ? (
                 <Tabs type="line" onChange={handleTabChange}>
-                    {Object.entries(baseUrls).map(([key, url]) => (
+                    {Object.entries(baseUrls).map(([key]) => (
                         <TabPane tab={key} itemKey={key} key={key}>
                             {renderContent()}
                         </TabPane>
