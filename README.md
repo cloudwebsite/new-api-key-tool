@@ -6,13 +6,14 @@
 
 #### Vercel 部署
 1. 点击右侧按钮开始部署：
-   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcloudwebsite%2Fnew-api-key-tool&env=REACT_APP_SHOW_DETAIL&env=REACT_APP_SHOW_BALANCE&env=REACT_APP_BASE_URL&env=REACT_APP_SHOW_ICONGITHUB&project-name=new-api-key-tool&repository-name=new-api-key-tool)，直接使用 Github 账号登录即可，记得根据自己需求配置环境变量，环境变量如下： 
+   [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fcloudwebsite%2Fnew-api-key-tool&env=REACT_APP_SHOW_DETAIL&env=REACT_APP_SHOW_BALANCE&env=REACT_APP_BASE_URL&env=REACT_APP_SHOW_ICONGITHUB&env=REACT_APP_ICP_BEIAN&project-name=new-api-key-tool&repository-name=new-api-key-tool)，直接使用 Github 账号登录即可，记得根据自己需求配置环境变量，环境变量如下： 
 
 ```   
 REACT_APP_SHOW_BALANCE: 是否展示令牌信息，true 或 false
 REACT_APP_SHOW_DETAIL: 是否展示调用详情，true 或 false
 REACT_APP_BASE_URL: 你的NewAPI项目地址
 REACT_APP_SHOW_ICONGITHUB: 是否展示Github图标，true 或 false
+REACT_APP_ICP_BEIAN: ICP备案号，留空则不显示
 ```
 
 例如如下配置：
@@ -28,6 +29,9 @@ REACT_APP_BASE_URL={"server1": "https://example.newapi.ai", "server2": "https://
 
 # 展示GitHub图标
 REACT_APP_SHOW_ICONGITHUB=true
+
+# ICP备案号，留空则不显示
+REACT_APP_ICP_BEIAN=
 ```
 
 3. 部署完毕后，即可开始使用；
