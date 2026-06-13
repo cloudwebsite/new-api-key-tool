@@ -9,7 +9,8 @@ import './index.css';
 import { ThemeProvider } from './context/Theme';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-const { Content, Header } = Layout;
+const { Content, Footer, Header } = Layout;
+const icpBeian = (process.env.REACT_APP_ICP_BEIAN || '').trim();
 root.render(
   <ThemeProvider>
     <Layout style={{ minHeight: '100vh' }}>
@@ -26,11 +27,15 @@ root.render(
           <App />
         </Content>
       </Layout>
+      {icpBeian && (
+        <Footer style={{ textAlign: 'center', padding: '16px 24px' }}>
+          <a href="https://beian.miit.gov.cn/" target="_blank" rel="noreferrer">
+            {icpBeian}
+          </a>
+        </Footer>
+      )}
     </Layout>
   </ThemeProvider>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
