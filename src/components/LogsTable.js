@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Button, Input, Typography, Table, Tag, Spin, Card, Collapse, Toast, Space, Tabs, DatePicker } from '@douyinfe/semi-ui';
 import { IconSearch, IconCopy, IconDownload } from '@douyinfe/semi-icons';
-import { API, timestamp2string, copy } from '../helpers';
+import { API, timestamp2string } from '../helpers';
 import { stringToColor } from '../helpers/render';
 import { ITEMS_PER_PAGE } from '../constants';
 import { renderModelPrice, renderQuota } from '../helpers/render';
@@ -17,6 +17,7 @@ const isMobile = () => {
 const { Text } = Typography;
 const { Panel } = Collapse;
 const { TabPane } = Tabs;
+const baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);
 
 function renderTimestamp(timestamp) {
     return timestamp2string(timestamp);
@@ -125,8 +126,6 @@ const LogsTable = () => {
         setStartDate(normalized[0]);
         setEndDate(normalized[1]);
     };
-    const baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);  // 解析环境变量
-
     useEffect(() => {
         // 默认设置第一个地址为baseUrl
         const firstKey = Object.keys(baseUrls)[0];
@@ -464,6 +463,38 @@ const LogsTable = () => {
 
     const [exporting, setExporting] = useState(false);
 
+    const searchControlsStyle = {
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'wrap',
+    };
+
+    const searchInputStyle = {
+        flex: '1 1 360px',
+        minWidth: 260,
+    };
+
+    const desktopDatePickerStyle = {
+        flex: '0 1 320px',
+        minWidth: 260,
+    };
+
+    const mobileDatePickerWrapperStyle = {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        width: '100%',
+    };
+
+    const mobileDatePickerStyle = {
+        width: '100%',
+    };
+
+    const searchButtonStyle = {
+        flexShrink: 0,
+    };
+
     const exportCSV = async (e) => {
         e.stopPropagation();
         
@@ -563,7 +594,7 @@ const LogsTable = () => {
     const renderContent = () => (
         <>
             <Card style={{ marginTop: 24, overflowX: 'auto' }}>
-                <div className="search-controls">
+                <div className="search-controls" style={searchControlsStyle}>
                     <Input
                         showClear
                         value={apikey}
@@ -576,9 +607,10 @@ const LogsTable = () => {
                             }
                         }}
                         className="search-input"
+                        style={searchInputStyle}
                     />
                     {isMobileView ? (
-                        <div className="date-picker-mobile-wrapper">
+                        <div className="date-picker-mobile-wrapper" style={mobileDatePickerWrapperStyle}>
                             <DatePicker
                                 type="date"
                                 value={startDate}
@@ -587,7 +619,7 @@ const LogsTable = () => {
                                 size="small"
                                 className="search-datepicker-mobile"
                                 position="bottomLeft"
-                                style={{ width: '100%' }}
+                                style={mobileDatePickerStyle}
                             />
                             <DatePicker
                                 type="date"
@@ -597,7 +629,7 @@ const LogsTable = () => {
                                 size="small"
                                 className="search-datepicker-mobile"
                                 position="bottomLeft"
-                                style={{ width: '100%' }}
+                                style={mobileDatePickerStyle}
                             />
                         </div>
                     ) : (
@@ -608,7 +640,7 @@ const LogsTable = () => {
                             size="small"
                             className="search-datepicker"
                             position="bottomLeft"
-                            style={{ width: '100%' }}
+                            style={desktopDatePickerStyle}
                         />
                     )}
                     <Button
@@ -618,6 +650,7 @@ const LogsTable = () => {
                         loading={loading}
                         disabled={apikey === ''}
                         className="search-button"
+                        style={searchButtonStyle}
                     >
                         查询
                     </Button>
