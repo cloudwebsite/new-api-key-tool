@@ -17,21 +17,20 @@ const isMobile = () => {
 const { Text } = Typography;
 const { Panel } = Collapse;
 const { TabPane } = Tabs;
-let baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);
-// 兼容单字符串格式
-if (typeof baseUrls === 'string') {
-    baseUrls = { 'default': baseUrls };
+let baseUrls;
+try {
+    baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);
+    // 兼容单字符串格式
+    if (typeof baseUrls === 'string') {
+        baseUrls = { 'default': baseUrls };
+    }
+} catch (e) {
+    // 如果JSON解析失败，直接作为字符串处理
+    baseUrls = { 'default': process.env.REACT_APP_BASE_URL };
 }
 
 function renderTimestamp(timestamp) {
     return timestamp2string(timestamp);
-}
-
-function formatDate(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
 }
 
 function renderIsStream(bool) {
@@ -106,7 +105,7 @@ const LogsTable = () => {
         const newStart = new Date(date);
         newStart.setHours(0, 0, 0, 0);
         setStartDate(newStart);
-        
+
         // 同步更新dateRange
         const newEnd = new Date(endDate);
         setDateRange([newStart, newEnd]);
@@ -117,7 +116,7 @@ const LogsTable = () => {
         const newEnd = new Date(date);
         newEnd.setHours(23, 59, 59, 999);
         setEndDate(newEnd);
-        
+
         // 同步更新dateRange
         const newStart = new Date(startDate);
         setDateRange([newStart, newEnd]);
@@ -130,6 +129,7 @@ const LogsTable = () => {
         setStartDate(normalized[0]);
         setEndDate(normalized[1]);
     };
+
     useEffect(() => {
         // 默认设置第一个地址为baseUrl
         const firstKey = Object.keys(baseUrls)[0];
@@ -146,12 +146,16 @@ const LogsTable = () => {
         setTabData((prevData) => ({
             ...prevData,
             [key]: {
-                balance: 0,
-                usage: 0,
-                accessdate: "未知",
+                totalGranted: 0,
+                totalUsed: 0,
+                totalAvailable: 0,
+                unlimitedQuota: false,
+                expiresAt: 0,
+                tokenName: '',
                 logs: [],
                 tokenValid: false,
-                token_name: undefined,
+                page: 1,
+                total: 0,
                 hasFetchedBalance: false,
             }
         }));
@@ -186,34 +190,44 @@ const LogsTable = () => {
         let currentRange = normalizeRange(params.range ?? dateRange);
         const startTs = Math.floor(currentRange[0].setHours(0, 0, 0, 0) / 1000);
         const endTs = Math.floor(currentRange[1].setHours(23, 59, 59, 999) / 1000);
-        const prev = tabData[activeTabKey] || { balance: 0, usage: 0, accessdate: "未知", tokenValid: false, token_name: undefined, hasFetchedBalance: false, page: 1, total: 0 };
+        const prev = tabData[activeTabKey] || {
+            totalGranted: 0,
+            totalUsed: 0,
+            totalAvailable: 0,
+            unlimitedQuota: false,
+            expiresAt: 0,
+            tokenName: '',
+            tokenValid: false,
+            page: 1,
+            total: 0,
+            hasFetchedBalance: false,
+        };
         let newTabData = { ...prev, logs: [], page: currentPage, total: prev.total };
 
         try {
             const shouldFetchBalance = params.forceBalanceUsage === true || !(tabData[activeTabKey]?.hasFetchedBalance);
             if (shouldFetchBalance && process.env.REACT_APP_SHOW_BALANCE === "true") {
-                const subscription = await API.get(`${baseUrl}/v1/dashboard/billing/subscription`, {
+                const usageRes = await API.get(`${baseUrl}/api/usage/token/`, {
                     headers: { Authorization: `Bearer ${apikey}` },
                 });
-                const subscriptionData = subscription.data;
-                newTabData.balance = subscriptionData.hard_limit_usd;
-                newTabData.accessdate = subscriptionData.access_until || 0;
-                newTabData.tokenValid = true;
-                if (subscriptionData.token_name) {
-                    newTabData.token_name = subscriptionData.token_name;
+                const usageData = usageRes.data;
+                if (usageData.code) {
+                    const d = usageData.data;
+                    newTabData.unlimitedQuota = d.unlimited_quota;
+                    newTabData.totalGranted = d.total_granted;
+                    newTabData.totalUsed = d.total_used;
+                    newTabData.totalAvailable = d.total_available;
+                    newTabData.expiresAt = d.expires_at;
+                    newTabData.tokenName = d.name;
+                    newTabData.tokenValid = true;
+                    newTabData.hasFetchedBalance = true;
+                } else {
+                    Toast.error(usageData.message || '查询令牌信息失败');
                 }
-                const start_date = formatDate(new Date(currentRange[0]));
-                const end_date = formatDate(new Date(currentRange[1]));
-                const res = await API.get(`${baseUrl}/v1/dashboard/billing/usage?start_date=${start_date}&end_date=${end_date}`, {
-                    headers: { Authorization: `Bearer ${apikey}` },
-                });
-                const data = res.data;
-                newTabData.usage = data.total_usage / 100;
-                newTabData.hasFetchedBalance = true;
             }
         } catch (e) {
-            console.log(e)
-            Toast.error("令牌已用尽");
+            console.log(e);
+            Toast.error("查询令牌信息失败，请检查令牌是否正确");
             resetData(activeTabKey); // 如果发生错误，重置所有数据为默认值
             setLoading(false);
         }
@@ -252,12 +266,7 @@ const LogsTable = () => {
                     newTabData.total = total || list.length;
                     newTabData.page = pageFromResp !== undefined ? pageFromResp : currentPage;
                     currentPageSize = sizeFromResp !== undefined ? sizeFromResp : currentPageSize;
-
-                    const tokenNameFromLogs = (list || []).find(item => (item && (item.type === 0 || item.type === 2) && item.token_name))?.token_name;
-                    if (!newTabData.token_name && tokenNameFromLogs) {
-                        newTabData.token_name = tokenNameFromLogs;
-                    }
-                    setActiveKeys(['1', '2']);
+                    setActiveKeys(['1', '2']); // 自动展开两个折叠面板
                 } else {
                     Toast.error('查询调用详情失败，请输入正确的令牌');
                 }
@@ -284,7 +293,7 @@ const LogsTable = () => {
                 Toast.success('已复制：' + text);
                 return;
             }
-
+            
             // Fallback for Safari and older browsers
             const textArea = document.createElement('textarea');
             textArea.value = text;
@@ -294,7 +303,7 @@ const LogsTable = () => {
             document.body.appendChild(textArea);
             textArea.focus();
             textArea.select();
-
+            
             try {
                 document.execCommand('copy');
                 textArea.remove();
@@ -314,6 +323,7 @@ const LogsTable = () => {
             dataIndex: 'created_at',
             render: renderTimestamp,
             sorter: (a, b) => a.created_at - b.created_at,
+            defaultSortOrder: 'descend',
         },
         {
             title: '模型',
@@ -446,51 +456,19 @@ const LogsTable = () => {
     const copyTokenInfo = (e) => {
         e.stopPropagation();
         const activeTabData = tabData[activeTabKey] || {};
-        const { balance, usage, accessdate } = activeTabData;
-        const info = `令牌总额: ${balance === 100000000 ? '无限' : `${balance.toFixed(3)}`}
-剩余额度: ${balance === 100000000 ? '无限制' : `${(balance - usage).toFixed(3)}`}
-已用额度: ${balance === 100000000 ? '不进行计算' : `${usage.toFixed(3)}`}
-有效期至: ${accessdate === 0 ? '永不过期' : renderTimestamp(accessdate)}`;
+        const { totalGranted, totalUsed, totalAvailable, unlimitedQuota, expiresAt } = activeTabData;
+        const info = `令牌总额: ${unlimitedQuota ? '无限' : renderQuota(totalGranted, 3)}
+剩余额度: ${unlimitedQuota ? '无限制' : renderQuota(totalAvailable, 3)}
+已用额度: ${unlimitedQuota ? '不进行计算' : renderQuota(totalUsed, 3)}
+有效期至: ${expiresAt === 0 ? '永不过期' : renderTimestamp(expiresAt)}`;
         copyText(info);
     };
 
     const [exporting, setExporting] = useState(false);
 
-    const searchControlsStyle = {
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        flexWrap: 'wrap',
-    };
-
-    const searchInputStyle = {
-        flex: '1 1 360px',
-        minWidth: 260,
-    };
-
-    const desktopDatePickerStyle = {
-        flex: '0 1 320px',
-        minWidth: 260,
-    };
-
-    const mobileDatePickerWrapperStyle = {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 8,
-        width: '100%',
-    };
-
-    const mobileDatePickerStyle = {
-        width: '100%',
-    };
-
-    const searchButtonStyle = {
-        flexShrink: 0,
-    };
-
     const exportCSV = async (e) => {
         e.stopPropagation();
-        
+
         if (apikey === '') {
             Toast.warning('请先输入令牌');
             return;
@@ -520,7 +498,7 @@ const LogsTable = () => {
                 params: {
                     key: apikey,
                     page: 1,
-                    page_size: total, // 请求所有数据
+                    page_size: total,
                     start_timestamp: startTs,
                     end_timestamp: endTs,
                 }
@@ -555,19 +533,18 @@ const LogsTable = () => {
                 '详情': log.content,
             }));
             const csvString = '\ufeff' + Papa.unparse(csvData);
-
             const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8' });
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
             link.download = 'data.csv';
-
+            
             // For Safari compatibility
             if (navigator.userAgent.indexOf('Safari') > -1 && navigator.userAgent.indexOf('Chrome') === -1) {
                 link.target = '_blank';
                 link.setAttribute('target', '_blank');
             }
-
+            
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -582,12 +559,23 @@ const LogsTable = () => {
         }
     };
 
-    const activeTabData = tabData[activeTabKey] || { logs: [], balance: 0, usage: 0, accessdate: "未知", tokenValid: false };
+    const activeTabData = tabData[activeTabKey] || {
+        logs: [],
+        totalGranted: 0,
+        totalUsed: 0,
+        totalAvailable: 0,
+        unlimitedQuota: false,
+        expiresAt: 0,
+        tokenName: '',
+        tokenValid: false,
+        page: 1,
+        total: 0,
+    };
 
     const renderContent = () => (
         <>
             <Card style={{ marginTop: 24, overflowX: 'auto' }}>
-                <div className="search-controls" style={searchControlsStyle}>
+                <div className="search-controls">
                     <Input
                         showClear
                         value={apikey}
@@ -600,10 +588,9 @@ const LogsTable = () => {
                             }
                         }}
                         className="search-input"
-                        style={searchInputStyle}
                     />
                     {isMobileView ? (
-                        <div className="date-picker-mobile-wrapper" style={mobileDatePickerWrapperStyle}>
+                        <div className="date-picker-mobile-wrapper">
                             <DatePicker
                                 type="date"
                                 value={startDate}
@@ -612,7 +599,7 @@ const LogsTable = () => {
                                 size="small"
                                 className="search-datepicker-mobile"
                                 position="bottomLeft"
-                                style={mobileDatePickerStyle}
+                                style={{ width: '100%' }}
                             />
                             <DatePicker
                                 type="date"
@@ -622,7 +609,7 @@ const LogsTable = () => {
                                 size="small"
                                 className="search-datepicker-mobile"
                                 position="bottomLeft"
-                                style={mobileDatePickerStyle}
+                                style={{ width: '100%' }}
                             />
                         </div>
                     ) : (
@@ -633,7 +620,7 @@ const LogsTable = () => {
                             size="small"
                             className="search-datepicker"
                             position="bottomLeft"
-                            style={desktopDatePickerStyle}
+                            style={{ width: '100%' }}
                         />
                     )}
                     <Button
@@ -643,7 +630,6 @@ const LogsTable = () => {
                         loading={loading}
                         disabled={apikey === ''}
                         className="search-button"
-                        style={searchButtonStyle}
                     >
                         查询
                     </Button>
@@ -664,19 +650,19 @@ const LogsTable = () => {
                             <Spin spinning={loading}>
                                 <div style={{ marginBottom: 16 }}>
                                     <Text type="secondary">
-                                        令牌总额：{activeTabData.balance === 100000000 ? "无限" : activeTabData.balance === "未知" || activeTabData.balance === undefined ? "未知" : `${activeTabData.balance.toFixed(3)}`}
+                                        令牌总额：{activeTabData.unlimitedQuota ? "无限" : !activeTabData.tokenValid ? "未知" : renderQuota(activeTabData.totalGranted, 3)}
                                     </Text>
                                     <br /><br />
                                     <Text type="secondary">
-                                        剩余额度：{activeTabData.balance === 100000000 ? "无限制" : activeTabData.balance === "未知" || activeTabData.usage === "未知" || activeTabData.balance === undefined || activeTabData.usage === undefined ? "未知" : `${(activeTabData.balance - activeTabData.usage).toFixed(3)}`}
+                                        剩余额度：{activeTabData.unlimitedQuota ? "无限制" : !activeTabData.tokenValid ? "未知" : renderQuota(activeTabData.totalAvailable, 3)}
                                     </Text>
                                     <br /><br />
                                     <Text type="secondary">
-                                        已用额度：{activeTabData.balance === 100000000 ? "不进行计算" : activeTabData.usage === "未知" || activeTabData.usage === undefined ? "未知" : `${activeTabData.usage.toFixed(3)}`}
+                                        已用额度：{activeTabData.unlimitedQuota ? "不进行计算" : !activeTabData.tokenValid ? "未知" : renderQuota(activeTabData.totalUsed, 3)}
                                     </Text>
                                     <br /><br />
                                     <Text type="secondary">
-                                        有效期至：{activeTabData.accessdate === 0 ? '永不过期' : activeTabData.accessdate === "未知" ? '未知' : renderTimestamp(activeTabData.accessdate)}
+                                        有效期至：{activeTabData.expiresAt === 0 ? '永不过期' : !activeTabData.tokenValid ? '未知' : renderTimestamp(activeTabData.expiresAt)}
                                     </Text>
                                 </div>
                             </Spin>
@@ -735,7 +721,7 @@ const LogsTable = () => {
         <>
             {Object.keys(baseUrls).length > 1 ? (
                 <Tabs type="line" onChange={handleTabChange}>
-                    {Object.entries(baseUrls).map(([key, url]) => (
+                    {Object.entries(baseUrls).map(([key]) => (
                         <TabPane tab={key} itemKey={key} key={key}>
                             {renderContent()}
                         </TabPane>
