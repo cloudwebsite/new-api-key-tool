@@ -17,7 +17,11 @@ const isMobile = () => {
 const { Text } = Typography;
 const { Panel } = Collapse;
 const { TabPane } = Tabs;
-const baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);
+let baseUrls = JSON.parse(process.env.REACT_APP_BASE_URL);
+// 兼容单字符串格式
+if (typeof baseUrls === 'string') {
+    baseUrls = { 'default': baseUrls };
+}
 
 function renderTimestamp(timestamp) {
     return timestamp2string(timestamp);
