@@ -164,6 +164,19 @@ const LogsTable = () => {
             return;
         }
         setLoading(true);
+        try {
+            const checkRes = await API.get(`/api/check.php`, { params: { key: apikey } });
+            if (checkRes.data !== 'ok') {
+                Toast.error('无效令牌');
+                setLoading(false);
+                return;
+            }
+        } catch (e) {
+            console.log(e);
+            Toast.error('无效令牌');
+            setLoading(false);
+            return;
+        }
         const currentPage = params.page ?? (tabData[activeTabKey]?.page ?? 1);
         let currentPageSize = params.page_size ?? pageSize;
         let currentRange = normalizeRange(params.range ?? dateRange);
