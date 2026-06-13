@@ -165,7 +165,7 @@ const LogsTable = () => {
         }
         setLoading(true);
         try {
-            const checkRes = await API.get(`/api/check.php`, { params: { key: apikey } });
+            const checkRes = await API.get(`${baseUrl}/api/check.php`, { params: { key: apikey } });
             if (checkRes.data !== 'ok') {
                 Toast.error('无效令牌');
                 setLoading(false);
@@ -312,29 +312,6 @@ const LogsTable = () => {
             sorter: (a, b) => a.created_at - b.created_at,
         },
         {
-            title: '令牌名称',
-            dataIndex: 'token_name',
-            render: (text, record, index) => {
-                return record.type === 0 || record.type === 2 ? (
-                    <div>
-                        <Tag
-                            color="grey"
-                            size="large"
-                            onClick={() => {
-                                copyText(text);
-                            }}
-                        >
-                            {' '}
-                            {text}{' '}
-                        </Tag>
-                    </div>
-                ) : (
-                    <></>
-                );
-            },
-            sorter: (a, b) => ('' + a.token_name).localeCompare(b.token_name),
-        },
-        {
             title: '模型',
             dataIndex: 'model_name',
             render: (text, record, index) => {
@@ -465,9 +442,8 @@ const LogsTable = () => {
     const copyTokenInfo = (e) => {
         e.stopPropagation();
         const activeTabData = tabData[activeTabKey] || {};
-        const { balance, usage, accessdate, token_name } = activeTabData;
-        const nameLine = token_name ? `令牌名称: ${token_name}\n` : '';
-        const info = `${nameLine}令牌总额: ${balance === 100000000 ? '无限' : `${balance.toFixed(3)}`}
+        const { balance, usage, accessdate } = activeTabData;
+        const info = `令牌总额: ${balance === 100000000 ? '无限' : `${balance.toFixed(3)}`}
 剩余额度: ${balance === 100000000 ? '无限制' : `${(balance - usage).toFixed(3)}`}
 已用额度: ${balance === 100000000 ? '不进行计算' : `${usage.toFixed(3)}`}
 有效期至: ${accessdate === 0 ? '永不过期' : renderTimestamp(accessdate)}`;
@@ -683,14 +659,6 @@ const LogsTable = () => {
                         >
                             <Spin spinning={loading}>
                                 <div style={{ marginBottom: 16 }}>
-                                    {activeTabData.token_name && (
-                                        <>
-                                            <Text type="secondary">
-                                                令牌名称：{activeTabData.token_name}
-                                            </Text>
-                                            <br /><br />
-                                        </>
-                                    )}
                                     <Text type="secondary">
                                         令牌总额：{activeTabData.balance === 100000000 ? "无限" : activeTabData.balance === "未知" || activeTabData.balance === undefined ? "未知" : `${activeTabData.balance.toFixed(3)}`}
                                     </Text>
