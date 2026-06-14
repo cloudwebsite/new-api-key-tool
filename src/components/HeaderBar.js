@@ -1,16 +1,8 @@
 import { Nav } from '@douyinfe/semi-ui';
 import { IconTag } from '@douyinfe/semi-icons-lab';
-import {
-  IconGithubLogo,
-  IconMoon,
-  IconSun,
-} from '@douyinfe/semi-icons';
-import { useSetTheme, useTheme } from '../context/Theme';
+import { IconGithubLogo } from '@douyinfe/semi-icons';
 
 const HeaderBar = () => {
-  const theme = useTheme();
-  const setTheme = useSetTheme();
-
   return (
     <div
       style={{
@@ -34,24 +26,11 @@ const HeaderBar = () => {
         }
         footer={
           <>
-            {theme === 'dark' ? (
-              <IconSun
-                size="large"
-                style={{ cursor: 'pointer', marginRight: '10px', color: 'var(--semi-color-text-2)' }}
-                onClick={() => setTheme(false)}
-              />
-            ) : (
-              <IconMoon
-                size="large"
-                style={{ cursor: 'pointer', marginRight: '10px', color: 'var(--semi-color-text-2)' }}
-                onClick={() => setTheme(true)}
-              />
-            )}
             {process.env.REACT_APP_SHOW_ICONGITHUB === "true" && (
               <IconGithubLogo
                 size="large"
                 style={{ cursor: 'pointer', marginRight: '10px', color: 'var(--semi-color-text-2)' }}
-                onClick={() => window.open('https://github.com/cloudwebsite/new-api-key-tool', '_blank')}
+                onClick={() => window.open('https://github.com/Calcium-Ion/neko-api-key-tool', '_blank')}
               />
             )}
           </>
