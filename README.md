@@ -12,7 +12,6 @@
 1. 点击右侧按钮开始部署：
    [![Deploy with EdgeOne](https://cdnstatic.tencentcs.com/edgeone/pages/deploy.svg)](https://console.cloud.tencent.com/edgeone/makers/new?repository-url=https%3A%2F%2Fgithub.com%2Fcloudwebsite%2Fnew-api-key-tool&env=REACT_APP_SHOW_DETAIL,REACT_APP_SHOW_BALANCE,REACT_APP_BASE_URL,REACT_APP_SHOW_ICONGITHUB,REACT_APP_ICP_BEIAN&project-name=new-api-key-tool)，直接使用腾讯云账号登录即可，记得根据自己需求配置环境变量，环境变量如下：
 
-```   
 
 #### EdgeOne 国际部署
 1. 点击右侧按钮开始部署：
