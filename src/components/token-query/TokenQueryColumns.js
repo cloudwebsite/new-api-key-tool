@@ -150,7 +150,7 @@ const createTokenQueryColumns = ({ copyText }) => [
     dataIndex: 'content',
     render: (text, record) => {
       const displayText =
-        text || (record.type === 5 ? '请求失败,如果多次出现，请排查模型是否下架' : PLACEHOLDER);
+        text || (record.type === 5 ? '请求失败,请排查模型是否下架或限流' : PLACEHOLDER);
       let other = null;
       try {
         if (record.other === '') {
