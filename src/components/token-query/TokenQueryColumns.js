@@ -9,18 +9,81 @@ import {
   renderUseTime,
 } from './TokenQueryFormatters';
 
+const PLACEHOLDER = '-';
+
+function isMjModel(modelName) {
+  return `${modelName || ''}`.startsWith('mj_');
+}
+
+function hasDisplayValue(value) {
+  return value !== undefined && value !== null && value !== '';
+}
+
+function renderType(type) {
+  switch (type) {
+    case 1:
+      return (
+        <Tag color="cyan" shape="circle">
+          充值
+        </Tag>
+      );
+    case 2:
+      return (
+        <Tag color="lime" shape="circle">
+          消费
+        </Tag>
+      );
+    case 3:
+      return (
+        <Tag color="orange" shape="circle">
+          管理
+        </Tag>
+      );
+    case 4:
+      return (
+        <Tag color="purple" shape="circle">
+          系统
+        </Tag>
+      );
+    case 5:
+      return (
+        <Tag color="red" shape="circle">
+          错误
+        </Tag>
+      );
+    case 6:
+      return (
+        <Tag color="teal" shape="circle">
+          退款
+        </Tag>
+      );
+    default:
+      return (
+        <Tag color="grey" shape="circle">
+          未知
+        </Tag>
+      );
+  }
+}
+
 const createTokenQueryColumns = ({ copyText }) => [
   {
     title: '时间',
     dataIndex: 'created_at',
-    render: renderTimestamp,
+    render: (text) => (text ? renderTimestamp(text) : PLACEHOLDER),
     sorter: (a, b) => a.created_at - b.created_at,
+  },
+  {
+    title: '类型',
+    dataIndex: 'type',
+    render: (text) => renderType(text),
+    sorter: (a, b) => (a.type ?? 0) - (b.type ?? 0),
   },
   {
     title: '模型',
     dataIndex: 'model_name',
     render: (text, record) => (
-      record.type === 0 || record.type === 2 ? (
+      text && !isMjModel(record.model_name) ? (
         <div>
           <Tag
             color={stringToColor(text)}
@@ -33,7 +96,7 @@ const createTokenQueryColumns = ({ copyText }) => [
             {text}{' '}
           </Tag>
         </div>
-      ) : <></>
+      ) : PLACEHOLDER
     ),
     sorter: (a, b) => (`${a.model_name || ''}`).localeCompare(b.model_name),
   },
@@ -41,10 +104,10 @@ const createTokenQueryColumns = ({ copyText }) => [
     title: '用时',
     dataIndex: 'use_time',
     render: (text, record) => (
-      record.model_name.startsWith('mj_') ? null : (
+      isMjModel(record.model_name) ? PLACEHOLDER : (
         <div>
           <Space>
-            {renderUseTime(text)}
+            {text === undefined || text === null ? PLACEHOLDER : renderUseTime(text)}
             {renderIsStream(record.is_stream)}
           </Space>
         </div>
@@ -56,8 +119,8 @@ const createTokenQueryColumns = ({ copyText }) => [
     title: '提示',
     dataIndex: 'prompt_tokens',
     render: (text, record) => (
-      record.model_name.startsWith('mj_') ? null : (
-        record.type === 0 || record.type === 2 ? <div><span> {text} </span></div> : <></>
+      isMjModel(record.model_name) ? PLACEHOLDER : (
+        <div><span> {hasDisplayValue(text) ? text : PLACEHOLDER} </span></div>
       )
     ),
     sorter: (a, b) => a.prompt_tokens - b.prompt_tokens,
@@ -66,9 +129,9 @@ const createTokenQueryColumns = ({ copyText }) => [
     title: '补全',
     dataIndex: 'completion_tokens',
     render: (text, record) => (
-      parseInt(text, 10) > 0 && (record.type === 0 || record.type === 2) ? (
-        <div><span> {text} </span></div>
-      ) : <></>
+      isMjModel(record.model_name) ? PLACEHOLDER : (
+        <div><span> {hasDisplayValue(text) ? text : PLACEHOLDER} </span></div>
+      )
     ),
     sorter: (a, b) => a.completion_tokens - b.completion_tokens,
   },
@@ -76,7 +139,9 @@ const createTokenQueryColumns = ({ copyText }) => [
     title: '花费',
     dataIndex: 'quota',
     render: (text, record) => (
-      record.type === 0 || record.type === 2 ? <div>{renderQuota(text, 6)}</div> : <></>
+      isMjModel(record.model_name) || !hasDisplayValue(text)
+        ? PLACEHOLDER
+        : <div>{renderQuota(text, 6)}</div>
     ),
     sorter: (a, b) => a.quota - b.quota,
   },
@@ -84,6 +149,8 @@ const createTokenQueryColumns = ({ copyText }) => [
     title: '详情',
     dataIndex: 'content',
     render: (text, record) => {
+      const displayText =
+        text || (record.type === 5 ? '请求失败,如果多次出现，请排查模型是否下架' : PLACEHOLDER);
       let other = null;
       try {
         if (record.other === '') {
@@ -98,7 +165,7 @@ const createTokenQueryColumns = ({ copyText }) => [
                 rows: 2,
               }}
             >
-              {text}
+              {displayText}
             </Paragraph>
           </Tooltip>
         );
@@ -113,7 +180,21 @@ const createTokenQueryColumns = ({ copyText }) => [
               },
             }}
           >
-            {text}
+            {displayText}
+          </Paragraph>
+        );
+      }
+      if (record.type !== 2) {
+        return (
+          <Paragraph
+            ellipsis={{
+              rows: 2,
+              showTooltip: {
+                type: 'popover',
+              },
+            }}
+          >
+            {displayText}
           </Paragraph>
         );
       }
@@ -132,7 +213,7 @@ const createTokenQueryColumns = ({ copyText }) => [
               rows: 2,
             }}
           >
-            {text}
+            {displayText}
           </Paragraph>
         </Tooltip>
       );
